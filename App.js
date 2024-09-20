@@ -1,29 +1,33 @@
 const express = require('express');
 const path = require('path');
-const cors = require('cors');
-const usersRouter = require('./usersRouter');
+const mysql = require('mysql2/promise');
+const dbConfig = require('./config/database');
 
 const app = express();
-const port = process.env.PORT || 3000; // Use environment variable or default to 3000
+const port = 3000;
 
-app.use(express.json());
-app.use(cors());
+app.use(express.static('public'));
 
-app.use(express.static(path.join(__dirname, '/Build')));
-app.use(express.static(path.join(__dirname, '/public')));
-
-app.use(`/users`, usersRouter);
-
-app.get('/webgl', (req, res) => {
-    res.sendFile(path.join(__dirname, 'Build', 'index.html'));
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'view.html'));
 });
 
-app.get('/manage', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'manage.html'));
+app.get('/api/data', async (req, res) => {
+    const connection = await mysql.createConnection(dbConfig);
+    try {
+        const [students] = await connection.execute('SELECT * FROM student');
+        const [lines] = await connection.execute('SELECT * FROM line');
+        res.json({ students, lines });
+    } catch (error) {
+        console.error('Error fetching data:', error);
+        res.status(500).json({ error: 'Error fetching data' });
+    } finally {
+        await connection.end();
+    }
 });
 
 app.listen(port, () => {
-    console.log(`SERVER 실행됨 ${port}`);
+    console.log(`Server running at http://localhost:${port}`);
 });
 // node app.js (터미널에서 이 코드로 실행)
 //http://127.0.0.1:3000
