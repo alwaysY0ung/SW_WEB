@@ -1,18 +1,16 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>User List</title>
+    <title>대기열 관리</title>
     <style>
         table {
             width: 100%;
             border-collapse: collapse;
         }
-        table, th, td {
-            border: 1px solid black;
-        }
         th, td {
+            border: 1px solid black;
             padding: 8px;
             text-align: left;
         }
@@ -22,105 +20,70 @@
     </style>
 </head>
 <body>
-    <h1>User List</h1>
-    <table id="userTable">
-        <thead>
-            <tr>
-                <th>Alphabet</th>
-                <th>Time</th>
-                <th>ID</th>
-                <th>Major</th>
-                <th>Name</th>
-                <th>NUID</th>
-                <th>Membership</th>
-                <th>Receipt</th>
-                <th>Receipt Button</th>
-            </tr>
-        </thead>
-        <tbody>
-            <!-- Data will be inserted here -->
-        </tbody>
-    </table>
+<h1>대기열 관리</h1>
+<table id="waitingTable">
+    <thead>
+    <tr>
+        <th>대기등록시간</th>
+        <th>대기등록번호</th>
+        <th>대기위치</th>
+        <th>전공</th>
+        <th>학번</th>
+        <th>이름</th>
+        <th>수령상태변경</th>
+    </tr>
+    </thead>
+    <tbody id="waitingTableBody">
+    <!-- 데이터가 여기에 동적으로 추가됩니다 -->
+    </tbody>
+</table>
 
-    <script>
-        // Fetch data from the /getUsers endpoint
-        async function fetchUsers() {
-            try {
-                const response = await fetch('/Users/getUsers');
-                const data = await response.json();
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        fetchWaitingList();
+    });
 
+    function fetchWaitingList() {
+        fetch('/users/getUsers')
+            .then(response => response.json())
+            .then(data => {
                 if (data.status_code === 200) {
-                    const tableBody = document.querySelector('#userTable tbody');
-                    tableBody.innerHTML = ''; // Clear existing rows
-
-                    data.users.forEach(user => {
-                        // Create a new row for each user
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td>${user.Alphabet}</td>
-                            <td>${user.Time}</td>
-                            <td>${user.ID}</td>
-                            <td>${user.Major}</td>
-                            <td>${user.Name}</td>
-                            <td>${user.NUID}</td>
-                            <td>${user.Membership}</td>
-                            <td id="receipt-${user.ID}">${user.Receipt}</td>
-                            <td>
-                                <button onclick="Received(${user.ID})">Received</button><br>
-                                <button onclick="NotReceived(${user.ID})">Not Received</button>
-                            </td>
-                        `;
-                        tableBody.appendChild(row);
-                    });
+                    populateTable(data.users);
                 } else {
-                    console.log('No users found.');
+                    console.error('Failed to fetch data:', data.message);
                 }
-            } catch (error) {
-                console.error('Error fetching user data:', error);
-            }
-        }
+            })
+            .catch(error => console.error('Error:', error));
+    }
 
-        async function Received(ID) {
-            
-            const response = await fetch(`/Users/Received/${ID}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-            });
+    function populateTable(users) {
+        const tableBody = document.getElementById('waitingTableBody');
+        tableBody.innerHTML = ''; // Clear existing rows
 
-            if (response.ok) {
-                console.log("Receipt updated successfully");
-            } else {
-                console.error("Failed to update receipt");
-            }
+        users.forEach(user => {
+            const row = tableBody.insertRow();
+            row.insertCell(0).textContent = user.Time;
+            row.insertCell(1).textContent = user.WaitingNumber;
+            row.insertCell(2).textContent = user.WaitingSpot;
+            row.insertCell(3).textContent = user.Major;
+            row.insertCell(4).textContent = user.ID;
+            row.insertCell(5).textContent = user.Name;
 
-        }
+            const statusCell = row.insertCell(6);
+            const statusButton = document.createElement('button');
+            statusButton.textContent = '상태 변경';
+            statusButton.onclick = function() {
+                toggleReceiptStatus(user.NUID);
+            };
+            statusCell.appendChild(statusButton);
+        });
+    }
 
-        async function NotReceived(ID) {
-            
-            const response = await fetch(`/Users/NotReceived/${ID}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-            });
-
-            if (response.ok) {
-                console.log("Receipt updated successfully");
-            } else {
-                console.error("Failed to update receipt");
-            }
-
-        }
-
-        window.onload = () => {
-            fetchUsers();
-
-            // 1초마다 데이터 가져옴
-            setInterval(fetchUsers, 10000); // 과부화 걱정 돼서 우선 10초로 진행 
-        };
-
-    </script>
+    function toggleReceiptStatus(NUID) {
+        // 여기에 상태 변경 로직을 구현하세요
+        console.log('Toggle status for NUID:', NUID);
+        // 예: fetch를 사용하여 서버에 상태 변경 요청을 보내고 테이블을 새로고침
+    }
+</script>
 </body>
 </html>

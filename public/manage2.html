@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>대기열 관리</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid black;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+<h1>대기열 관리</h1>
+<table id="WaitingTable">
+    <thead>
+    <tr>
+        <th>대기등록시간</th>
+        <th>대기등록번호</th>
+        <th>대기위치</th>
+        <th>전공</th>
+        <th>학번</th>
+        <th>이름</th>
+        <th>수령상태변경</th>
+    </tr>
+    </thead>
+    <tbody>
+    <!-- Data will be inserted here -->
+    </tbody>
+</table>
+<script>
+    // Fetch data from the /Users/line endpoint
+    async function fetchUsers() {
+        try {
+            const response = await fetch('/Users/getUsers');
+            const data = await response.json();
+            if (data.status_code === 200) {
+                const tableBody = document.querySelector('#userTable tbody');
+                tableBody.innerHTML = ''; // Clear existing rows
+                data.users.forEach(user => {
+                    // Create a new row for each user
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                    <td>${user.Time}</td>
+                    <td>${user.WaitingNumber}</td>
+                    <td>${user.WaitingSpot}</td>
+                    <td>${user.Major}</td>
+                    <td>${user.ID}</td>
+                    <td>${user.Name}</td>
+                    <td>
+                        <button onclick="Received('${user.NUID}')">Received</button><br>
+                        <button onclick="NotReceived('${user.NUID}')">Not Received</button>
+                    </td>
+                `;
+                    tableBody.appendChild(row);
+                });
+            } else {
+                console.log('No users found.');
+            }
+        } catch (error) {
+            console.error('Error fetching user data:', error);
+        }
+    }
+
+    async function Received(NUID) {
+        const response = await fetch(`/Users/Received/${NUID}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+        });
+        if (response.ok) {
+            console.log("Receipt updated successfully");
+            fetchUsers(); // Refresh the table
+        } else {
+            console.error("Failed to update receipt");
+        }
+    }
+
+    async function NotReceived(NUID) {
+        const response = await fetch(`/Users/NotReceived/${NUID}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+        });
+        if (response.ok) {
+            console.log("Receipt updated successfully");
+            fetchUsers(); // Refresh the table
+        } else {
+            console.error("Failed to update receipt");
+        }
+    }
+    window.onload = () => {
+        fetchUsers();
+        // 10초마다 데이터 가져옴
+        setInterval(fetchUsers, 10000);
+    };
+</script>
+</body>
+</html>

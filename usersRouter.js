@@ -1,184 +1,122 @@
 const express = require('express');
-const userDBC = require('./usersDBC');
 const router = express.Router();
+const db = require('./config/database');  // 파일 이름이 정확한지 확인하세요
 
-
-function formatDateTime(dateTimeString) {
-    const date = new Date(dateTimeString);
-
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0'); // 월은 0부터 시작하므로 +1
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    const seconds = String(date.getSeconds()).padStart(2, '0');
-
-    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-}
-
-function formatRecipt(Receipt){
-    let ReceiptRes;
-    if (Receipt === null) {
-        ReceiptRes = "대기";  // You can change this to whatever suits your needs
-    } else if (Receipt === 1) {
-        ReceiptRes = "완료";
-    } else if (Receipt === 0) {
-        ReceiptRes = "불가";
-    } 
-
-    return ReceiptRes;
-}
-
-router.get('/getUsers', async (req, res)=>
-{
-    let res_get_users = 
-    {
-        status_code : 500,
-        users : [] 
-    };
-
-    try
-    {
-        const rows = await userDBC.getUsers(); // DB에서 데이터 가져옴
-        res_get_users.status_code = 200;
-        if(rows.length > 0)
-        {
-            rows.forEach((user)=>
-            {
-                res_get_users.users.push
-                ({
-                    Alphabet : user.Alphabet,
-                    ID : user.ID,
-                    Major : user.Major,
-                    Name : user.Name,
-                    Time : formatDateTime(user.Time),
-                    Membership : user.Membership,
-                    NUID : user.NUID,
-                    Receipt :formatRecipt(user.Receipt),
-                });
-            });
-        }
-        else
-        {
-            console.log('사용자 없음');
-        }
-    }
-    catch(error)
-    {
-        console.log(error.message);
-    }
-    finally
-    {
-        res.json(res_get_users);
-    }
-});
-
-router.post('/Received/:ID', async (req, res) => {
-    const res_signup = {
-        status_code: 500
-    };
-
+router.get('/getUsers', async (req, res) => {
     try {
-        const userId = req.params.ID;  // URL에서 사용자 ID를 가져옴
-        const rows = await userDBC.Received(userId);
- 
-        if (rows.affectedRows > 0) {
-            res_signup.status_code = 200;  
-        } else {
-            res_signup.status_code = 201;  
-        }
+        const lines = await db.getLine();
+        res.json({ status_code: 200, users: lines });
     } catch (err) {
-        console.log(err.message);
-    } finally {
-        res.json(res_signup);
+        console.error('Error in /getUsers route:', err);
+        res.status(500).json({ message: err.message });
     }
 });
 
-router.post('/NotReceived/:ID', async (req, res) => {
-    const res_signup = {
-        status_code: 500
-    };
-
+// router.get('/getUsers', async (req, res) => {
+//     try {
+//         const lines = await db.getLine();
+//         const formattedData = lines.map(line => ({
+//             Time: line.Time,
+//             WaitingNumber: line.WaitingNumber,
+//             WaitingSpot: line.WaitingSpot,
+//             Major: line.Major,
+//             ID: line.ID,  // 학번
+//             Name: line.Name,
+//             NUID: line.NUID  // 추가
+//         }));
+//         res.json({ status_code: 200, users: formattedData });
+//     } catch (err) {
+//         res.status(500).json({ message: err.message });
+//     }
+// });
+// 새로운 학생 추가
+router.post('/student', async (req, res) => {
+    const { ID, Name, NUID, Major, Membership } = req.body;
     try {
-        const userId = req.params.ID;  // URL에서 사용자 ID를 가져옴
-        const rows = await userDBC.NotReceived(userId);
- 
-        if (rows.affectedRows > 0) {
-            res_signup.status_code = 200;  
-        } else {
-            res_signup.status_code = 201;  
-        }
+        const result = await db.insertStudent([ID, Name, NUID, Major, Membership]);
+        res.status(201).json({ message: '학생이 성공적으로 추가되었습니다.', id: result.insertId });
     } catch (err) {
-        console.log(err.message);
-    } finally {
-        res.json(res_signup);
+        res.status(400).json({ message: err.message });
     }
 });
 
+// 대기열에 학생 추가
+router.post('/line', async (req, res) => {
+    const { NUID, Time, WaitingNumber, WaitingSpot } = req.body;
+    try {
+        const result = await db.insertLine([NUID, Time, WaitingNumber, WaitingSpot, null]);
+        res.status(201).json({ message: '대기열에 학생이 성공적으로 추가되었습니다.', id: result.insertId });
+    } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+});
 
+// 학생 정보 업데이트
+router.put('/student/:NUID', async (req, res) => {
+    const { NUID } = req.params;
+    const { Name, Major, Membership } = req.body;
+    try {
+        await db.updateStudent(NUID, [Name, Major, Membership]);
+        res.json({ message: '학생 정보가 성공적으로 업데이트되었습니다.' });
+    } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+});
 
+// 대기 상태 업데이트 (Received)
+router.put('/line/:NUID/received', async (req, res) => {
+    const { NUID } = req.params;
+    try {
+        await db.Received(NUID);
+        res.json({ message: '대기 상태가 "받음"으로 업데이트되었습니다.' });
+    } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+});
 
-// router.post('/insertUser', async(req, res)=>{
-//     const res_signup = {
-//         status_code : 500
-//     };
+// 대기 상태 업데이트 (NotReceived)
+router.put('/line/:NUID/notreceived', async (req, res) => {
+    const { NUID } = req.params;
+    try {
+        await db.NotReceived(NUID);
+        res.json({ message: '대기 상태가 "받지 않음"으로 업데이트되었습니다.' });
+    } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+});
 
-//     try{
-//         const {Id, Major, Name, Time} =  req.body;
-//         const rows = await userDBC.insertUser([Id, Major, Name, Time]);
-//         if(rows.affectedRows > 0){
-//             res_signup.status_code = 200;
-//         }else{
-//             res_signup.status_code = 201;
-//         }
-//     }catch(err)
-//     {
-//         console.log(err.message);
-//     }finally{
-//         res.json(res_signup);
-//     }
-// });
+// 대기 위치 업데이트
+router.put('/line/:NUID/spot', async (req, res) => {
+    const { NUID } = req.params;
+    const { WaitingSpot } = req.body;
+    try {
+        await db.UpdateWaitingSpot(NUID, WaitingSpot);
+        res.json({ message: '대기 위치가 성공적으로 업데이트되었습니다.' });
+    } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+});
 
-// router.post('/deleteUser', async(req, res)=>{
-//     const res_delete_user = {
-//         status_code : 500
-//     };
+// 학생 삭제
+router.delete('/student/:NUID', async (req, res) => {
+    const { NUID } = req.params;
+    try {
+        await db.deleteStudent(NUID);
+        res.json({ message: '학생이 성공적으로 삭제되었습니다.' });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
 
-//     try{
-//         const {Id} =  req.body;
-//         const rows = await userDBC.deleteUser([Id]);
-//         if(rows.affectedRows > 0){
-//             res_delete_user.status_code = 200;
-//         }else{
-//             res_delete_user.status_code = 201;
-//         }
-//     }catch(err)
-//     {
-//         console.log(err.message);
-//     }finally{
-//         res.json(res_delete_user);
-//     }
-// });
+// 대기열에서 학생 제거
+router.delete('/line/:NUID', async (req, res) => {
+    const { NUID } = req.params;
+    try {
+        await db.deleteLine(NUID);
+        res.json({ message: '대기열에서 학생이 성공적으로 제거되었습니다.' });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
 
-// router.post('/updateUser', async(req, res)=>{
-//     const res_update_user = {
-//         status_code : 500
-//     };
-
-//     try{
-//         const {Id, Major, Name, Time} =  req.body;
-//         const rows = await userDBC.updateUser(Id, Major, Name, Time);
-//         if(rows.affectedRows > 0){
-//             res_update_user.status_code = 200;
-//         }else{
-//             res_update_user.status_code = 201;
-//         }
-//     }catch(err)
-//     {
-//         console.log(err.message);
-//     }finally{
-//         res.json(res_update_user);
-//     }
-// });
-
-module.exports = router; // 이 라우터를 외부로 보냄
+module.exports = router;
