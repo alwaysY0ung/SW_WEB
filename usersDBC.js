@@ -1,4 +1,4 @@
-const mysql = require('mysql2');
+const mysql = require('mysql2/promise');  // promise를 반환하지 않는 쿼리 메소드를 사용하고 있다는 것 ->promise 버전의 mysql2를 사용
 const dbConfig = require('./config/database');
 
 // Create the connection pool using the configuration
@@ -7,7 +7,7 @@ const pool = mysql.createPool(dbConfig);
 const getLine = async () => {
     try {
         const [lines] = await pool.query(`
-            SELECT l.*, s.Major AS major, s.ID, s.Name
+            SELECT l.*, s.Major AS Major, s.ID, s.Name
             FROM line l
             JOIN student s ON l.NUID = s.NUID
             ORDER BY l.Time;
