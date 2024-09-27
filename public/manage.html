@@ -31,7 +31,7 @@
         <th>ID</th>
         <th>Name</th>
         <th>Receipt</th>
-        <th>Receipt Button</th>
+        <th colspan="3">Receipt Button</th>
     </tr>
     </thead>
     <tbody id="userTableBody">
@@ -56,11 +56,17 @@
                     row.insertCell(5).textContent = user.Name;
                     row.insertCell(6).textContent = user.Receipt ? 'Received' : 'Not Received';
 
-                    const buttonCell = row.insertCell(7);
-                    const button = document.createElement('button');
-                    button.textContent = user.Receipt ? 'Mark as Not Received' : 'Mark as Received';
-                    button.onclick = () => updateReceipt(user.ID, !user.Receipt);
-                    buttonCell.appendChild(button);
+                    const receivedButtonCell = row.insertCell(7);
+                    const receivedButton = document.createElement('button');
+                    receivedButton.textContent = user.Receipt ? 'Mark as Not Received' : 'Mark as Received';
+                    receivedButton.onclick = () => updateReceipt(user.ID, !user.Receipt);
+                    receivedButtonCell.appendChild(receivedButton);
+
+                    const notArrivedButtonCell = row.insertCell(8);
+                    const notArrivedButton = document.createElement('button');
+                    notArrivedButton.textContent = '제 시간에 오지 않음';
+                    notArrivedButton.onclick = () => markAsNotArrived(user.ID);
+                    notArrivedButtonCell.appendChild(notArrivedButton);
                 });
             })
             .catch(error => console.error('Error:', error));
@@ -86,6 +92,25 @@
             .catch(error => console.error('Error:', error));
     }
 
+    function markAsNotArrived(id) {
+        fetch('/api/notArrived', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ NUID: id }),
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    fetchUsers(); // 데이터 다시 불러오기
+                } else {
+                    console.error('Failed to mark as not arrived');
+                }
+            })
+            .catch(error => console.error('Error:', error));
+    }
+
     // 페이지 로드 시 사용자 데이터 가져오기
     fetchUsers();
 
@@ -94,129 +119,3 @@
 </script>
 </body>
 </html>
-
-<!--<!DOCTYPE html>-->
-<!--<html lang="en">-->
-<!--<head>-->
-<!--    <meta charset="UTF-8">-->
-<!--    <meta name="viewport" content="width=device-width, initial-scale=1.0">-->
-<!--    <title>User List</title>-->
-<!--    <style>-->
-<!--        table {-->
-<!--            width: 100%;-->
-<!--            border-collapse: collapse;-->
-<!--        }-->
-<!--        table, th, td {-->
-<!--            border: 1px solid black;-->
-<!--        }-->
-<!--        th, td {-->
-<!--            padding: 8px;-->
-<!--            text-align: left;-->
-<!--        }-->
-<!--        th {-->
-<!--            background-color: #f2f2f2;-->
-<!--        }-->
-<!--    </style>-->
-<!--</head>-->
-<!--<body>-->
-<!--<h1>User List</h1>-->
-<!--<table id="userTable">-->
-<!--    <thead>-->
-<!--    <tr>-->
-<!--        <th>Time</th>-->
-<!--        <th>WaitingNumber</th>-->
-<!--        <th>WaitingSpot</th>-->
-<!--        <th>Major</th>-->
-<!--        <th>ID</th>-->
-<!--        <th>Name</th>-->
-<!--        <th>Receipt</th>-->
-<!--        <th>Receipt Button</th>-->
-<!--    </tr>-->
-<!--    </thead>-->
-<!--    <tbody>-->
-<!--    &lt;!&ndash; Data will be inserted here &ndash;&gt;-->
-<!--    </tbody>-->
-<!--</table>-->
-
-<!--<script>-->
-<!--    // Fetch data from the /getUsers endpoint-->
-<!--    async function fetchUsers() {-->
-<!--        try {-->
-<!--            const response = await fetch('/Users/getUsers');-->
-<!--            const data = await response.json();-->
-
-<!--            if (data.status_code === 200) {-->
-<!--                const tableBody = document.querySelector('#userTable tbody');-->
-<!--                tableBody.innerHTML = ''; // Clear existing rows-->
-
-<!--                data.users.forEach(user => {-->
-<!--                    // Create a new row for each user-->
-<!--                    const row = document.createElement('tr');-->
-<!--                    row.innerHTML = `-->
-<!--                            <td>${user.WaitingSpot}</td>-->
-<!--                            <td>${user.Time}</td>-->
-<!--                            <td>${user.ID}</td>-->
-<!--                            <td>${user.Major}</td>-->
-<!--                            <td>${user.Name}</td>-->
-<!--                            <td>${user.NUID}</td>-->
-<!--                            <td>${user.Membership}</td>-->
-<!--                            <td id="receipt-${user.ID}">${user.Receipt}</td>-->
-<!--                            <td>-->
-<!--                                <button onclick="Received(${user.ID})">Received</button><br>-->
-<!--                                <button onclick="NotReceived(${user.ID})">Not Received</button>-->
-<!--                            </td>-->
-<!--                        `;-->
-<!--                    tableBody.appendChild(row);-->
-<!--                });-->
-<!--            } else {-->
-<!--                console.log('No users found.');-->
-<!--            }-->
-<!--        } catch (error) {-->
-<!--            console.error('Error fetching user data:', error);-->
-<!--        }-->
-<!--    }-->
-
-<!--    async function Received(ID) {-->
-
-<!--        const response = await fetch(`/Users/Received/${ID}`, {-->
-<!--            method: 'POST',-->
-<!--            headers: {-->
-<!--                'Content-Type': 'application/json'-->
-<!--            },-->
-<!--        });-->
-
-<!--        if (response.ok) {-->
-<!--            console.log("Receipt updated successfully");-->
-<!--        } else {-->
-<!--            console.error("Failed to update receipt");-->
-<!--        }-->
-
-<!--    }-->
-
-<!--    async function NotReceived(ID) {-->
-
-<!--        const response = await fetch(`/Users/NotReceived/${ID}`, {-->
-<!--            method: 'POST',-->
-<!--            headers: {-->
-<!--                'Content-Type': 'application/json'-->
-<!--            },-->
-<!--        });-->
-
-<!--        if (response.ok) {-->
-<!--            console.log("Receipt updated successfully");-->
-<!--        } else {-->
-<!--            console.error("Failed to update receipt");-->
-<!--        }-->
-
-<!--    }-->
-
-<!--    window.onload = () => {-->
-<!--        fetchUsers();-->
-
-<!--        // 1초마다 데이터 가져옴-->
-<!--        setInterval(fetchUsers, 10000); // 과부화 걱정 돼서 우선 10초로 진행-->
-<!--    };-->
-
-<!--</script>-->
-<!--</body>-->
-<!--</html>-->
