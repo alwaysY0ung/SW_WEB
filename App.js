@@ -2,6 +2,7 @@ const express = require('express');
 const path = require('path');
 const mysql = require('mysql2/promise');
 const dbConfig = require('./config/database');
+const usersDBC = require('./usersDBC');  // usersDBC 모듈 추가
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -61,6 +62,16 @@ app.post('/api/notReceived', async (req, res) => {
         res.json({ success: true });
     } catch (error) {
         console.error('Error updating receipt status:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+app.post('/api/notArrived', async (req, res) => {
+    try {
+        await usersDBC.markAsNotArrived(req.body.NUID);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error marking as not arrived:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });

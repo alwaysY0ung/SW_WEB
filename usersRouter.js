@@ -113,4 +113,36 @@ router.delete('/line/:ID', async (req, res) => {
     }
 });
 
+// 대기 상태 업데이트 (Received)
+router.put('/line/:ID/received', async (req, res) => {
+    const { ID } = req.params;
+    try {
+        await usersDBC.Received(ID);
+        res.json({ message: '대기 상태가 "받음"으로 업데이트되었습니다.' });
+    } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+});
+
+// 대기 상태 업데이트 (NotReceived)
+router.put('/line/:ID/notreceived', async (req, res) => {
+    const { ID } = req.params;
+    try {
+        await usersDBC.NotReceived(ID);
+        res.json({ message: '대기 상태가 "받지 않음"으로 업데이트되었습니다.' });
+    } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+});
+
+router.post('/line/:ID/notArrived', async (req, res) => {
+    try {
+        await usersDBC.markAsNotArrived(req.body.NUID);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error marking as not arrived:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 module.exports = router;
